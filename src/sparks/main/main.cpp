@@ -33,6 +33,7 @@ void RunApp(sparks::Renderer *renderer) {
   app_settings.validation_layer = absl::GetFlag(FLAGS_validation_layer);
   app_settings.width = absl::GetFlag(FLAGS_width);
   app_settings.height = absl::GetFlag(FLAGS_height);
+//   app_settings.hardware_renderer = true;
   app_settings.hardware_renderer = absl::GetFlag(FLAGS_vkrt);
   app_settings.selected_device = absl::GetFlag(FLAGS_device);
   sparks::App app(renderer, app_settings);

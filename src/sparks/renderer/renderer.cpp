@@ -215,7 +215,7 @@ void Renderer::RayGeneration(int x,
   auto camera_to_world = scene_.GetCameraToWorld();
   origin = camera_to_world * glm::vec4(origin, 1.0f);
   direction = camera_to_world * glm::vec4(direction, 0.0f);
-  color_result = path_tracer.SampleRay(origin, direction, x, y, sample);
+  color_result = path_tracer.TracePath(origin, direction, x, y, sample);
 }
 
 void Renderer::RetrieveAccumulationResult(

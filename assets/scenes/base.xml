@@ -11,10 +11,11 @@
 	<envmap type="file" value="../../textures/envmap_clouds_4k.hdr"/>
 
 	<model type="obj">
-		<filename value="../../meshes/plane.obj"/>
+		<filename value="../../meshes/StreetLamp.obj"/>
 
 		<material type="lambertian">
 			<albedo value="0.8 0.8 0.8"/>
+			<albedo_texture value="../../meshes/grey-concrete-texture.jpg"/>
 		</material>
 	</model>
 

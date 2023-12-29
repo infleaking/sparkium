@@ -217,6 +217,7 @@ float Scene::TraceRay(const glm::vec3 &origin,
         (result < 0.0f || local_result < result)) {
       result = local_result;
       if (hit_record) {
+        // assert (glm::dot(local_hit_record.geometry_normal, transformed_direction)<=0);
         local_hit_record.position =
             transform * glm::vec4{local_hit_record.position, 1.0f};
         local_hit_record.normal = glm::transpose(inv_transform) *
@@ -228,6 +229,7 @@ float Scene::TraceRay(const glm::vec3 &origin,
             glm::vec4{local_hit_record.geometry_normal, 0.0f};
         *hit_record = local_hit_record;
         hit_record->hit_entity_id = entity_id;
+        assert(glm::dot(direction, local_hit_record.geometry_normal)<=0);
       }
     }
   }
