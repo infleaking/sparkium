@@ -24,5 +24,6 @@ struct AxisAlignedBoundingBox {
   AxisAlignedBoundingBox operator|(const AxisAlignedBoundingBox &aabb) const;
   AxisAlignedBoundingBox &operator&=(const AxisAlignedBoundingBox &aabb);
   AxisAlignedBoundingBox &operator|=(const AxisAlignedBoundingBox &aabb);
+  AxisAlignedBoundingBox &operator|=(const glm::vec3 &position);
 };
 }  // namespace sparks

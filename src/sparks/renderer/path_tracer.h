@@ -28,7 +28,7 @@ class PathTracer {
                                     int y,
                                     int sample,
                                     std::mt19937 &rd) const;
-  [[nodiscard]] void SampleLight(glm::vec3 origin, glm::vec3 normal, glm::vec3 &dir, glm::vec3 &eval, float &pdf, std::mt19937 &rd);
+  [[nodiscard]] glm::vec3 SampleLight(float &pdf, glm::vec3 &sampled, glm::vec3 &normal, std::mt19937 &rd);
 
   unsigned seed=0; 
  private:

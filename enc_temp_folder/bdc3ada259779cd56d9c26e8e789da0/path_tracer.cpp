@@ -149,6 +149,7 @@ glm::vec3 PathTracer::TracePath(glm::vec3 origin, glm::vec3 direction, int x, in
             throughput *= glm::dot(N, glm::normalize(outdir)) * material.albedo_color / relative_dir.z;
             origin = hit_record.position;
             direction = outdir;
+            // TODO
         }
     }
     seed ^= rd();

@@ -7,16 +7,153 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
-
+// std::ostream& operator<<(std::ostream& os, const glm::vec3& vector3) {
+//     os << "glm::vec3 values: " << vector3.x << ", " << vector3.y << ", " << vector3.z;
+//     return os;
+// }
+typedef std::pair< glm::vec3, int> boundary;
 namespace sparks {
 
 Mesh::Mesh(const Mesh &mesh) : Mesh(mesh.vertices_, mesh.indices_) {
 }
+uint32_t Mesh::leafnode(std::vector<uint32_t> &face){
+    if (face.empty()) return 1e8;
+    uint32_t x = nodes++;
+    faces.emplace_back(face);
+    AxisAlignedBoundingBox bbox = AxisAlignedBoundingBox(vertices_[indices_[ face[0]]].position);
+    for (auto i: face){
+        bbox|=vertices_[indices_[i]].position;
+        bbox|=vertices_[indices_[i+1]].position;
+        bbox|=vertices_[indices_[i+2]].position;
+    }
+    T.emplace_back(kdtnode(bbox, 0, 0));
+    // std::cerr<<x<<"__________";
+    // for (auto i:face){
+    //     std::cerr<<i<<"--";
+    // }
+    // std::cerr<<'\n';
+    return x;
+}
+bool x_first(boundary a, boundary b){
+    if (a.first.x==b.first.x)
+        return a.second > b.second;
+    return a.first.x < b.first.x;
+}
+bool y_first(boundary a, boundary b){
+    if (a.first.y==b.first.y)
+        return a.second > b.second;
+    return a.first.y < b.first.y;
+}
+bool z_first(boundary a, boundary b){
+    if (a.first.z==b.first.z)
+        return a.second > b.second;
+    return a.first.z < b.first.z;
+}
+uint32_t Mesh::init_kdt(std::vector<uint32_t> &face){
+    // std::cerr<<face.size()<<std::endl;
+    if (face.size() < 10) return leafnode(face);
+    std::vector<boundary> b;
+    for (auto i: face){
+        // std::cerr<<i<<'\n';
+        glm::vec3 v0 = vertices_[indices_[i]].position, v1 = vertices_[indices_[i+1]].position, v2 = vertices_[indices_[i+2]].position;
+        glm::vec3 high = glm::max(v0,glm::max(v1,v2));
+        glm::vec3 low = glm::min(v0,glm::min(v1,v2));
+        b.push_back(std::make_pair(low, 1));
+        b.push_back(std::make_pair(high, -1));
+    }
+    glm::vec3 _x{0.0f};
+    int x_divide = face.size(), leftcount = 0, rightcount = face.size();
+    std::sort(b.begin(), b.end(), x_first);
+    // std::cerr<<"_____________x\n";
+    for (auto i : b){
+        if (i.second == 1) leftcount ++;
+        else rightcount --;
+        if (std::max(leftcount, rightcount) < x_divide){
+            _x = i.first;
+            x_divide = std::max(leftcount, rightcount);
+        }
+        // std::cerr<<leftcount<<' '<<rightcount<<' '<<i.first<<' '<<i.second<<std::endl;
+    }
+    // std::cerr<<"_____________-x\n";
 
+    glm::vec3 _y{0.0f};
+    int y_divide = face.size();
+    leftcount = 0, rightcount = face.size();
+    std::sort(b.begin(), b.end(), y_first);
+    // std::cerr<<"_____________y\n";
+    for (auto i : b){
+        if (i.second == 1) leftcount ++;
+        else rightcount --;
+        if (std::max(leftcount, rightcount) < y_divide){
+            _y = i.first;
+            y_divide = std::max(leftcount, rightcount);
+        }
+        // std::cerr<<leftcount<<' '<<rightcount<<' '<<i.first<<' '<<i.second<<std::endl;
+    }
+    // std::cerr<<"_____________-y\n";
+    
+    glm::vec3 _z{0.0f};
+    int z_divide = face.size();
+    leftcount = 0, rightcount = face.size();
+    std::sort(b.begin(), b.end(), z_first);
+    for (auto i : b){
+        if (i.second == 1) leftcount ++;
+        else rightcount --;
+        if (std::max(leftcount, rightcount) < z_divide){
+            _z = i.first;
+            z_divide = std::max(leftcount, rightcount);
+        }
+    }
+    if (std::max(std::max(x_divide, y_divide), z_divide) + 5 >= face.size())
+        return leafnode(face);
+    // std::cerr<<x_divide<<' '<<y_divide<<' '<<z_divide<<' '<<face.size()<<std::endl;
+    std::vector<uint32_t> left, right;
+    glm::vec3 ref{0.0f};
+    left.clear();
+    right.clear();
+    int index = 0;
+    if (x_divide <= y_divide && x_divide <= z_divide){
+        index = 0;
+        ref = _x;
+    }
+    else if (y_divide <= x_divide && y_divide <= z_divide){
+        index = 1;
+        ref = _y;
+    } 
+    else if (z_divide <= x_divide && z_divide <= y_divide) {
+        index = 2;
+        ref = _z;
+    }
+    // std::cerr<<index<<' '<<ref<<"________________\n";
+    for (auto i : face){
+        glm::vec3 v0 = vertices_[indices_[i]].position, v1 = vertices_[indices_[i+1]].position, v2 = vertices_[indices_[i+2]].position;
+        glm::vec3 high = glm::max(v0,glm::max(v1,v2));
+        glm::vec3 low = glm::min(v0,glm::min(v1,v2));
+        if (low[index] <= ref[index]) left.emplace_back(i);
+        if (high[index] > ref[index]) right.emplace_back(i);
+        // std::cerr<<low<<' '<<high<<std::endl;
+    }
+    // std::cerr<<"_____________\n";
+    // std::cerr<<left.size()<<' '<<right.size()<<std::endl;
+    uint32_t lc = init_kdt(left), rc = init_kdt(right);
+    
+    uint32_t x = nodes++;
+    faces.emplace_back(std::vector<uint32_t>());
+    AxisAlignedBoundingBox bbox = T[lc].bbox | T[rc].bbox;    
+    T.emplace_back(kdtnode(bbox, lc, rc));
+    // std::cerr<<x<<' '<<lc<<' '<<rc<<" --1\n";
+    return x;
+}
 Mesh::Mesh(const std::vector<Vertex> &vertices,
            const std::vector<uint32_t> &indices) {
   vertices_ = vertices;
   indices_ = indices;
+  std::vector<uint32_t> face;
+  for (uint32_t i=0;i+3<=indices_.size();i+=3)
+    face.emplace_back(i);
+  nodes = 0;
+//   std::cerr<<vertices[0].position<<'-'<<face.size()<<'-'<<indices.size()<<"--vertice\n";
+  root = init_kdt(face);
 }
 
 Mesh Mesh::Cube(const glm::vec3 &center, const glm::vec3 &size) {
@@ -77,27 +214,24 @@ AxisAlignedBoundingBox Mesh::GetAABB(const glm::mat4 &transform) const {
   return result;
 }
 
-float Mesh::TraceRay(const glm::vec3 &origin,
-                     const glm::vec3 &direction,
-                     float t_min,
-                     HitRecord *hit_record) const {
-  float result = -1.0f;
-  for (int i = 0; i < indices_.size(); i += 3) {
-    int j = i + 1, k = i + 2;
-    const auto &v0 = vertices_[indices_[i]];
-    const auto &v1 = vertices_[indices_[j]];
-    const auto &v2 = vertices_[indices_[k]];
-
+void checkTriangle(const Vertex &v0,
+                   const Vertex &v1,
+                   const Vertex &v2,
+                   const glm::vec3 &origin,
+                   const glm::vec3 &direction,
+                   float t_min,
+                   HitRecord *hit_record,
+                   float &result) {
     glm::mat3 A = glm::mat3(v1.position - v0.position,
                             v2.position - v0.position, -direction);
     if (std::abs(glm::determinant(A)) < 1e-9f) {
-      continue;
+      return;
     }
     A = glm::inverse(A);
     auto uvt = A * (origin - v0.position);
     auto &t = uvt.z;
     if (t < t_min || (result > 0.0f && t > result)) {
-      continue;
+      return;
     }
     auto &u = uvt.x;
     auto &v = uvt.y;
@@ -129,9 +263,97 @@ float Mesh::TraceRay(const glm::vec3 &origin,
         }
       }
     }
-  }
-  return result;
 }
+void Mesh::searchface(const uint32_t x,
+                      const glm::vec3 &origin,
+                      const glm::vec3 &direction,
+                      float t_min,
+                      HitRecord *hit_record,
+                      float &result) const {
+    if (!T[x].bbox.IsIntersect(origin, direction, t_min, result))return;
+    if (!faces[x].empty()){
+        for (auto i : faces[x]){
+            checkTriangle(vertices_[indices_[i]], 
+                          vertices_[indices_[i+1]], 
+                          vertices_[indices_[i+2]],
+                          origin, 
+                          direction, 
+                          t_min, 
+                          hit_record, 
+                          result);
+        }
+        return;
+    }
+    searchface(T[x].l, origin, direction, t_min, hit_record, result);
+    searchface(T[x].r, origin, direction, t_min, hit_record, result);
+}
+float Mesh::TraceRay(const glm::vec3 &origin,
+                     const glm::vec3 &direction,
+                     float t_min,
+                     HitRecord *hit_record) const {
+
+    float result = -1.0f;
+    if (root < nodes){
+        searchface(root, origin, direction, t_min, hit_record, result);
+    }
+    return result;
+}
+
+// float Mesh::TraceRay(const glm::vec3 &origin,
+//                      const glm::vec3 &direction,
+//                      float t_min,
+//                      HitRecord *hit_record) const {
+//   float result = -1.0f;
+//   for (int i = 0; i < indices_.size(); i += 3) {
+//     int j = i + 1, k = i + 2;
+//     const auto &v0 = vertices_[indices_[i]];
+//     const auto &v1 = vertices_[indices_[j]];
+//     const auto &v2 = vertices_[indices_[k]];
+
+//     glm::mat3 A = glm::mat3(v1.position - v0.position,
+//                             v2.position - v0.position, -direction);
+//     if (std::abs(glm::determinant(A)) < 1e-9f) {
+//       continue;
+//     }
+//     A = glm::inverse(A);
+//     auto uvt = A * (origin - v0.position);
+//     auto &t = uvt.z;
+//     if (t < t_min || (result > 0.0f && t > result)) {
+//       continue;
+//     }
+//     auto &u = uvt.x;
+//     auto &v = uvt.y;
+//     auto w = 1.0f - u - v;
+//     auto position = origin + t * direction;
+//     if (u >= 0.0f && v >= 0.0f && u + v <= 1.0f) {
+//       result = t;
+//       if (hit_record) {
+//         auto geometry_normal = glm::normalize(
+//             glm::cross(v2.position - v0.position, v1.position - v0.position));
+//         if (glm::dot(geometry_normal, direction) < 0.0f) {
+//           hit_record->position = position;
+//           hit_record->geometry_normal = geometry_normal;
+//           hit_record->normal = v0.normal * w + v1.normal * u + v2.normal * v;
+//           hit_record->tangent =
+//               v0.tangent * w + v1.tangent * u + v2.tangent * v;
+//           hit_record->tex_coord =
+//               v0.tex_coord * w + v1.tex_coord * u + v2.tex_coord * v;
+//           hit_record->front_face = true;
+//         } else {
+//           hit_record->position = position;
+//           hit_record->geometry_normal = -geometry_normal;
+//           hit_record->normal = -(v0.normal * w + v1.normal * u + v2.normal * v);
+//           hit_record->tangent =
+//               -(v0.tangent * w + v1.tangent * u + v2.tangent * v);
+//           hit_record->tex_coord =
+//               v0.tex_coord * w + v1.tex_coord * u + v2.tex_coord * v;
+//           hit_record->front_face = false;
+//         }
+//       }
+//     }
+//   }
+//   return result;
+// }
 
 void Mesh::WriteObjFile(const std::string &file_path) const {
   std::ofstream file(file_path);

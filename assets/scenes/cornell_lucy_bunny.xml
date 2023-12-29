@@ -12,10 +12,10 @@
 
     <!--Light-->
     <model name="Light">
-        <vertex position="556.0 548.7 0.0  "/>
-        <vertex position="556.0 548.7 559.2"/>
-        <vertex position="0.0 548.7 559.2"/>
-        <vertex position="0.0 548.7   0.0"/>
+        <vertex position="343.0 548.7 227.0"/>
+        <vertex position="343.0 548.7 332.0"/>
+        <vertex position="213.0 548.7 332.0"/>
+        <vertex position="213.0 548.7 227.0"/>
         <index value="0"/>
         <index value="1"/>
         <index value="3"/>

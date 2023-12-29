@@ -100,4 +100,10 @@ AxisAlignedBoundingBox &AxisAlignedBoundingBox::operator|=(
   return *this;
 }
 
+AxisAlignedBoundingBox &AxisAlignedBoundingBox::operator|=(
+    const glm::vec3 &position) {
+  *this = *this | AxisAlignedBoundingBox(position);
+  return *this;
+}
+
 }  // namespace sparks
